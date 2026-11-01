@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from nexus import __version__
-from nexus.api.deps import SESSION_COOKIE, load_session
+from nexus.api.deps import SESSION_COOKIE, client_ip, load_session
 from nexus.api.realtime import Client, Hub
 from nexus.config import ROOT_DIR
 from nexus.core.context import NexusError
@@ -130,7 +130,7 @@ def create_app(runtime: Runtime | None = None, *, start_background: bool = True,
     @app.middleware("http")
     async def security_middleware(request: Request, call_next):
         path = request.url.path
-        ip = request.client.host if request.client else "?"
+        ip = client_ip(request) or "?"
         if path.startswith("/auth/") and not limiter.allow(ip, "auth", 30):
             return JSONResponse({"error": "rate_limited", "message": "Too many login attempts. Wait a minute."}, status_code=429)
         if path.startswith("/api/") and not limiter.allow(ip, "api", 600):

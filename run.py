@@ -5,6 +5,7 @@
     python run.py bot        Discord bot only
     python run.py stop       stop a running launcher
     python run.py check      validate configuration and database
+    python run.py online     website + bot with a public https:// link (Cloudflare Tunnel)
 
 The launcher validates configuration, applies a staged database restore, runs
 migrations once, then starts each component as its own process. A component
@@ -115,12 +116,134 @@ def wait_for_web(url: str, timeout: float = 45) -> bool:
     return False
 
 
+# ---------------------------------------------------------------------------
+# Public link (start-online.bat)
+# ---------------------------------------------------------------------------
+
+def online_env(url: str, fixed: bool, current_redirect: str = "") -> dict[str, str]:
+    """Environment overrides that make Nexus serve correctly at a public HTTPS address.
+
+    Nothing is written to config.env — the values only live for this run.
+    """
+    url = url.rstrip("/")
+    env = {"PUBLIC_URL": url, "COOKIE_SECURE": "true", "TRUST_PROXY": "true", "DEV_LOGIN": "false"}
+    # A quick tunnel's address changes every start, so the OAuth redirect must follow it.
+    # A fixed tunnel keeps any DISCORD_REDIRECT_URI the owner set on purpose.
+    if not fixed or not current_redirect:
+        env["DISCORD_REDIRECT_URI"] = f"{url}/auth/callback"
+    return env
+
+
+def start_public_link(log_file: Path):
+    """Start Cloudflare Tunnel and point this run of Nexus at its address."""
+    from nexus import tunnel as tun
+
+    s = get_settings()
+    if s.dev_login:
+        say("DEV_LOGIN is turned OFF while online: it would let anyone on the internet sign in as the Owner.", "warn")
+    fixed = bool(s.tunnel_token)
+    if fixed and not s.public_url.startswith("https://"):
+        raise tun.TunnelError("TUNNEL_TOKEN is set, so PUBLIC_URL must be the https:// address you gave that tunnel "
+                              "in the Cloudflare dashboard (e.g. https://cad.example.com).")
+    exe = tun.locate(s.data_path / "tools", s.cloudflared_path, log=lambda m: say(m))
+    say("Starting Cloudflare Tunnel…")
+    t = tun.Tunnel(exe, s.web_port, token=s.tunnel_token, log_file=log_file)
+    url = t.start()
+    if fixed:
+        url = s.public_url
+        if not url:
+            raise tun.TunnelError("PUBLIC_URL is empty.")
+        if t.alive() and not t.url:
+            say("Tunnel is starting (connection not confirmed yet — see data/logs/tunnel.log).", "warn")
+    t.url = url
+    return t
+
+
+def apply_public_link(t) -> None:
+    s = get_settings()
+    os.environ.update(online_env(t.url, t.fixed, s.discord_redirect_uri if t.fixed else ""))
+    get_settings.cache_clear()
+    s = get_settings()
+    (s.data_path / "public_url.txt").write_text(s.base_url + "\n", encoding="utf-8")
+
+
+def public_link_banner(t) -> None:
+    from nexus import tunnel as tun
+
+    s = get_settings()
+    line = "=" * 72
+    print(f"\n{C['ok']}{line}{C['end']}")
+    print(f"  {C['b']}Your ERLC Nexus website is ONLINE:{C['end']}  {C['b']}{s.base_url}{C['end']}")
+    print("  Share this link with your community. It works while this window is open.")
+    print(f"{C['ok']}{line}{C['end']}")
+    if s.oauth_configured:
+        copied = tun.copy_to_clipboard(s.oauth_redirect)
+        print(f"\n  {C['warn']}One step for Discord sign-in:{C['end']} add this address to your Discord application")
+        print("  (Developer Portal > your app > OAuth2 > Redirects > Add Redirect > Save Changes):\n")
+        print(f"      {C['b']}{s.oauth_redirect}{C['end']}" + ("   (copied - just press Ctrl+V)" if copied else ""))
+        if not t.fixed:
+            print(f"\n  {C['dim']}The free quick link changes every time you start. For a permanent link see")
+            print(f"  docs/DEPLOYMENT.md > 'A permanent link'.{C['end']}")
+            if IS_WINDOWS and s.discord_application_id:
+                try:
+                    import webbrowser
+                    webbrowser.open(f"https://discord.com/developers/applications/{s.discord_application_id}/oauth2")
+                except Exception:
+                    pass
+    else:
+        print(f"\n  {C['warn']}Discord login is not configured yet{C['end']} (DISCORD_APPLICATION_ID / DISCORD_CLIENT_SECRET).")
+    print(f"\n  {C['dim']}The /nexus dashboard command in Discord now links to this address too.{C['end']}\n")
+
+
 class Supervisor:
-    def __init__(self, names: list[str]) -> None:
+    def __init__(self, names: list[str], tunnel=None) -> None:
         self.names = names
         self.procs: dict[str, subprocess.Popen] = {}
         self.restarts: dict[str, list[float]] = {n: [] for n in names}
         self.stopping = False
+        self.tunnel = tunnel
+        self.tunnel_restarts: list[float] = []
+
+    def check_tunnel(self) -> bool:
+        """Restart a dropped tunnel. Returns False if it can't be kept up."""
+        t = self.tunnel
+        if t is None or t.alive():
+            return True
+        recent = [x for x in self.tunnel_restarts if time.time() - x < 600]
+        self.tunnel_restarts = recent
+        if len(recent) >= 5:
+            say("Cloudflare Tunnel keeps stopping (5 times in 10 minutes). The website is still running on "
+                "this computer only — see data/logs/tunnel.log.", "bad")
+            self.tunnel = None
+            return True
+        say("Cloudflare Tunnel stopped. Reconnecting…", "warn")
+        self.tunnel_restarts.append(time.time())
+        old = t.url
+        try:
+            time.sleep(2 ** len(recent))
+            new = start_public_link(t.log_file)
+        except Exception as exc:
+            say(f"Reconnect failed: {exc}", "bad")
+            return True
+        self.tunnel = new
+        if new.url != old:
+            apply_public_link(new)
+            say("The public link changed — restarting the website and bot so they use it.", "warn")
+            self._restart_components()
+            public_link_banner(new)
+        else:
+            say("Tunnel reconnected.", "ok")
+        return True
+
+    def _restart_components(self) -> None:
+        for name, p in list(self.procs.items()):
+            if p.poll() is None:
+                try:
+                    p.send_signal(signal.CTRL_BREAK_EVENT if IS_WINDOWS else signal.SIGINT)
+                    p.wait(timeout=15)
+                except Exception:
+                    p.kill()
+            self.spawn(name)
 
     def spawn(self, name: str) -> None:
         kwargs = {"cwd": str(ROOT)}
@@ -161,6 +284,8 @@ class Supervisor:
                 say("Website did not respond yet — check data/logs/web.log", "warn")
         if "bot" in self.names:
             self.spawn("bot")
+        if self.tunnel is not None:
+            public_link_banner(self.tunnel)
         print(f"\n{C['dim']}ERLC Nexus is running. Keep this window open. Press Ctrl+C or run stop.bat to stop.{C['end']}")
         print(f"{C['dim']}It is only online while this computer is on and awake.{C['end']}\n")
         try:
@@ -191,11 +316,15 @@ class Supervisor:
                 if not self.procs:
                     say("No components are running.", "bad")
                     return 1
+                self.check_tunnel()
                 time.sleep(1)
         except KeyboardInterrupt:
             print()
         finally:
             self.stop_all()
+            if self.tunnel is not None:
+                self.tunnel.stop()
+                say("Public link closed.", "ok")
         return 0
 
 
@@ -217,10 +346,11 @@ def main(argv: list[str]) -> int:
         return 1
     if cmd == "check":
         return 0 if check() else 1
-    if cmd not in ("all", "web", "bot"):
+    if cmd not in ("all", "web", "bot", "online"):
         print(__doc__)
         return 2
-    names = ["web", "bot"] if cmd == "all" else [cmd]
+    online = cmd == "online"
+    names = ["web", "bot"] if cmd in ("all", "online") else [cmd]
     if pid_file.exists():
         try:
             old = int(pid_file.read_text().strip())
@@ -236,7 +366,7 @@ def main(argv: list[str]) -> int:
             say(f"ERLC Nexus already seems to be running (pid {old}). Run stop.bat first.", "bad")
             return 1
     apply_restore()
-    if not check("all" if cmd == "all" else cmd):
+    if not check("all" if cmd in ("all", "online") else cmd):
         say("Fix the problems above and run start.bat again.", "bad")
         return 1
     if "bot" in names and not s.discord_bot_token:
@@ -244,12 +374,27 @@ def main(argv: list[str]) -> int:
         names.remove("bot")
     if not names:
         return 1
+    tunnel = None
+    if online:
+        from nexus.tunnel import TunnelError
+
+        try:
+            tunnel = start_public_link(s.data_path / "logs" / "tunnel.log")
+        except TunnelError as exc:
+            say(str(exc), "bad")
+            say("Your website can still run on this computer only: use start.bat.", "warn")
+            return 1
+        apply_public_link(tunnel)
+        say(f"Public link ready: {tunnel.url}", "ok")
     stop_flag.unlink(missing_ok=True)
     pid_file.write_text(str(os.getpid()))
     try:
-        return Supervisor(names).run(stop_flag)
+        return Supervisor(names, tunnel).run(stop_flag)
     finally:
         pid_file.unlink(missing_ok=True)
+        if tunnel is not None:
+            tunnel.stop()
+            (s.data_path / "public_url.txt").unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

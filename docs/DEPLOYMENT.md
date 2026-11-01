@@ -43,6 +43,41 @@ User=nexus
 WantedBy=multi-user.target
 ```
 
+## Public link from your own PC (start-online)
+
+`start-online.bat` / `./start-online.sh` (`run.py online`) runs Cloudflare Tunnel next to
+ERLC Nexus. The website keeps listening on `127.0.0.1`; `cloudflared` makes an outbound
+connection to Cloudflare, which serves your site over HTTPS. For that run only, the launcher sets
+`PUBLIC_URL`, `DISCORD_REDIRECT_URI`, `COOKIE_SECURE=true`, `TRUST_PROXY=true` and
+`DEV_LOGIN=false` (config.env is not modified). If the tunnel drops, it is reconnected; if the
+address changes, the website and bot restart so links stay correct. Logs: `data/logs/tunnel.log`.
+
+`cloudflared` (Cloudflare's official open-source client) is found via `CLOUDFLARED_PATH`,
+`data/tools`, or your `PATH`; otherwise it is downloaded once from Cloudflare's GitHub releases.
+On macOS install it with `brew install cloudflared`.
+
+Quick tunnels are meant for testing: Cloudflare gives no uptime guarantee and the address changes
+on every start.
+
+### A permanent link
+
+A fixed address needs a domain you own (domains usually cost money — about $10/year) added to a
+free Cloudflare account:
+
+1. Cloudflare dashboard → **Zero Trust → Networks → Tunnels → Create a tunnel** (Cloudflared).
+2. Copy the **token** from the install command it shows.
+3. **Public hostname**: e.g. `cad.yourdomain.com` → Service `HTTP` → `127.0.0.1:8420`.
+4. In `config.env`:
+   ```
+   TUNNEL_TOKEN=<the token>
+   PUBLIC_URL=https://cad.yourdomain.com
+   ```
+5. Add `https://cad.yourdomain.com/auth/callback` to Discord OAuth2 Redirects **once**.
+6. Run `start-online.bat`. The address now stays the same.
+
+`TUNNEL_TOKEN` is a secret: it's masked in status pages, passed to `cloudflared` through the
+environment (not the command line) and scrubbed from the tunnel log.
+
 ## Making the website reachable
 
 By default the website only listens on `127.0.0.1` (this computer). To open it to others:
@@ -50,8 +85,9 @@ By default the website only listens on `127.0.0.1` (this computer). To open it t
 * **Local network only:** set `WEB_HOST=0.0.0.0`, allow port 8420 in the firewall, and use
   `http://<pc-ip>:8420`. Add that callback URL in the Discord Developer Portal and set
   `PUBLIC_URL=http://<pc-ip>:8420`.
-* **Internet:** put ERLC Nexus behind a reverse proxy with HTTPS. Keep `WEB_HOST=127.0.0.1`
-  and let the proxy forward to it.
+* **Internet:** use `start-online` (above), or put ERLC Nexus behind a reverse proxy with HTTPS.
+  Keep `WEB_HOST=127.0.0.1` and let the proxy forward to it. With a proxy on the same computer,
+  set `TRUST_PROXY=true` so logins, rate limits and the audit log see visitors' real IP addresses.
 
 ### Reverse proxy example (Caddy, automatic HTTPS)
 
@@ -66,6 +102,7 @@ Then in `config.env`:
 ```
 PUBLIC_URL=https://cad.example.com
 COOKIE_SECURE=true
+TRUST_PROXY=true
 ```
 
 and add `https://cad.example.com/auth/callback` to your Discord OAuth2 redirects.

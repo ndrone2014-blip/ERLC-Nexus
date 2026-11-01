@@ -25,6 +25,7 @@ SECRET_FIELDS = {
     "erlc_server_key",
     "erlc_global_key",
     "secret_key",
+    "tunnel_token",
 }
 
 
@@ -75,6 +76,12 @@ class Settings(BaseModel):
     session_hours: int = Field(default=12, ge=1, le=24 * 30)
     cookie_secure: bool = False
     dev_login: bool = False
+    # Behind a tunnel / reverse proxy on this computer: read the visitor's real IP from
+    # CF-Connecting-IP / X-Forwarded-For (only when the request comes from 127.0.0.1).
+    trust_proxy: bool = False
+    # start-online: optional fixed Cloudflare Tunnel (token from the Cloudflare dashboard).
+    tunnel_token: str = ""
+    cloudflared_path: str = ""
 
     # Platform
     database_url: str = ""

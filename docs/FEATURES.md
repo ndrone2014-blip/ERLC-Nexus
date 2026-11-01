@@ -146,4 +146,8 @@ Status key: ✅ complete · 🟡 partial (works, with the stated limitation) · 
 * Plate checks that combine registration, flags and active BOLOs in one alert.
 * Tamper-evident (hash-chained) audit log.
 * Launcher with automatic crash recovery and staged, verified restores.
+* **`start-online.bat`: one-click public `https://` link** for the self-hosted website via free
+  Cloudflare Tunnel (auto-download, Discord redirect copied to the clipboard, reconnects, optional
+  permanent address). Real-tunnel connection untested — see TEST_REPORT.md.
+* Proxy-aware visitor IPs (`TRUST_PROXY`) for rate limits, login records and the audit log.
 * Linux/macOS scripts and a deployment guide.

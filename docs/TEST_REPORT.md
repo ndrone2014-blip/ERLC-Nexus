@@ -9,13 +9,15 @@ This report only claims what was actually executed. Anything not tested is liste
 
 | Suite | Result |
 |---|---|
-| Automated tests (`pytest`) | **103 passed, 0 failed** |
+| Automated tests (`pytest`) | **121 passed, 0 failed** |
 | Static analysis (`ruff`, pyflakes rules + syntax) | **0 issues** |
 | Browser check — every website route loaded in headless Chrome | **56/56 routes rendered with no JavaScript errors** |
 | Browser workflow — dispatcher flow driven through the real UI | **Passed** |
 | Installer steps 5–10 (`scripts/setup.py`) on a clean copy | **Passed** (idempotent; existing `config.env` preserved) |
 | Launcher (`run.py`): start → health → stop | **Passed** (graceful shutdown) |
 | Launcher crash recovery (website process killed) | **Passed** (restarted automatically) |
+| `run.py online` (start-online) end to end with a stand-in tunnel | **Passed** (see below) |
+| Real `cloudflared` download from GitHub + `--version` | **Passed** (cloudflared 2026.10.7, Linux) |
 
 Run the suite yourself: `.venv\Scripts\python.exe -m pytest` (needs `requirements-dev.txt`).
 
@@ -31,6 +33,7 @@ Run the suite yourself: `.venv\Scripts\python.exe -m pytest` (needs `requirement
 | `test_platform.py` | 10 | Permission wildcards, least-privilege default roles, config parsing and secret masking, **Discord role → Nexus role mapping** (and ignored for other guilds), Owner protections, settings validation, **audit hash chain detects tampering**, notification grouping/audiences/read state, **backup → stage → apply restore** (incl. path traversal rejection), **migration creates exactly the model schema**. |
 | `test_api.py` | 19 | Login required, **CSRF enforced**, security headers, every read endpoint returns 200 for an owner (68 endpoints), **ERLC key never appears in any response**, dashboard key is tested and stored encrypted, **403 for lower roles across admin/CAD/records/commands**, role headers from the browser ignored, dev-login disabled / cross-site refused, **Discord OAuth flow** (state check, token exchange, guild roles, least privilege), logout revokes session, WebSocket auth + per-permission event filtering, outbox → WebSocket delivery, **Ed25519 webhook verification**, webhook disabled by default, friendly validation errors, ERLC errors mapped to HTTP codes, full CAD → report → CSV flow over HTTP. |
 | `test_bot.py` | 11 | All 12 command groups + 2 context menus register with the expected subcommands, payloads valid for Discord (description lengths, option order, ≤100 commands), Discord roles → permissions in the bot, `/cad 911` modal creates a pending incident, permission-denied message, `/shift start` and `/shift end`, owner-locked views reject other users, views disable on timeout, user-safe error messages, notifier embeds for every event type, live panels render. |
+| `test_online.py` | 18 | Quick-tunnel address detection (incl. **error lines that name `api.trycloudflare.com` are ignored** — a bug found in a real run), download file per OS/CPU, forwarded visitor IPs trusted **only from 127.0.0.1**, **tunnelled visitors refused local login**, rate limit per visitor behind the tunnel, online settings flow into OAuth redirect / bot links / Secure cookies, `TUNNEL_TOKEN` masked, kept off the command line and scrubbed from logs, tunnel start/stop/failure messages, and the **whole launcher in online mode** (public address → website, OAuth redirect, Secure cookie, `public_url.txt`, `DEV_LOGIN` forced off, clean stop closes the link). |
 | `test_web.py` | 5 | Index and assets served, every router entry points at an existing page export, every navigation item from the specification exists, no `innerHTML` usage, only local scripts. |
 
 ## Browser checks (headless Chrome, live server, ERLC API mocked with documented payloads)
@@ -43,6 +46,17 @@ Run the suite yourself: `.venv\Scripts\python.exe -m pytest` (needs `requirement
   911 call in the Dispatch Center → assign the unit → send a dispatch message → add a note
   on the incident page → create a person record → open the live map (12 markers drawn).
   All steps succeeded and updated live over the WebSocket.
+
+## start-online (public link)
+
+The sandbox can download `cloudflared` from GitHub but cannot reach Cloudflare's tunnel
+service, so a real `trycloudflare.com` link could not be created here. That real attempt found
+one bug (an error message's `api.trycloudflare.com` was reported as the link — fixed and
+covered by tests). Everything after the tunnel was then tested with a stand-in `cloudflared`
+that prints the same banner and forwards requests with Cloudflare's headers: the website loaded
+through it, Discord login pointed at the public address, cookies were `Secure`, the visitor's IP
+(not 127.0.0.1) was recorded in the audit/auth log, local login was refused, and `stop` closed
+everything with no leftover processes.
 
 ## Bugs found and fixed during testing
 
@@ -59,6 +73,7 @@ Run the suite yourself: `.venv\Scripts\python.exe -m pytest` (needs `requirement
 | Area | Status |
 |---|---|
 | `install.bat`, `start.bat`, `stop.bat` on Windows | **Not executed** — the build environment is Linux. The Python steps they call were tested (installer, launcher start/stop/restart). Windows-specific pieces (Python detection via `py`, `CTRL_BREAK` shutdown signal) are untested. Please report any issue. |
+| A real Cloudflare quick tunnel | **Not tested** — Cloudflare's tunnel service is unreachable from the build sandbox (see above). WebSocket live updates through the tunnel were not exercised by the stand-in (Cloudflare documents WebSocket support). `start-online.bat` itself not executed on Windows. |
 | Live Discord gateway | Not tested with a real bot token. Commands, payloads, permission resolution and several callbacks were tested with simulated interactions. |
 | Live ERLC API | Not tested with a real server key. All behaviour was tested against responses shaped exactly like the official documentation (apidocs.erlc.gg). |
 | Discord OAuth against discord.com | Tested with a mocked Discord API (full flow), not the real service. |

@@ -20,15 +20,16 @@ ERLC Nexus is a free, self-hosted management platform for *Emergency Response: L
 4. [Configure Discord](#configure-discord)
 5. [Configure the ERLC API](#configure-the-erlc-api)
 6. [First login and setup](#first-login-and-setup)
-7. [Everyday use](#everyday-use)
-8. [Discord commands](#discord-commands)
-9. [How it works](#how-it-works)
-10. [Backups](#backups)
-11. [Updating](#updating)
-12. [Troubleshooting](#troubleshooting)
-13. [Hosting elsewhere (optional)](#hosting-elsewhere-optional)
-14. [Project layout](#project-layout)
-15. [Development & tests](#development--tests)
+7. [Put the website online](#put-the-website-online)
+8. [Everyday use](#everyday-use)
+9. [Discord commands](#discord-commands)
+10. [How it works](#how-it-works)
+11. [Backups](#backups)
+12. [Updating](#updating)
+13. [Troubleshooting](#troubleshooting)
+14. [Hosting elsewhere (optional)](#hosting-elsewhere-optional)
+15. [Project layout](#project-layout)
+16. [Development & tests](#development--tests)
 
 Further documentation lives in [`docs/`](docs):
 [API compatibility report](docs/API_COMPATIBILITY.md) ·
@@ -83,6 +84,8 @@ Everything else is installed automatically. No paid services are needed.
 5. To stop, press **Ctrl+C** in that window or double-click **`stop.bat`**.
 
 `start.bat web` starts only the website, `start.bat bot` only the bot.
+Want other people to open the website from anywhere? Use **`start-online.bat`** instead — see
+[Put the website online](#put-the-website-online).
 
 ## Configure Discord
 
@@ -113,6 +116,31 @@ ERLC Nexus makes one request per sync (default every 20 s) and follows every doc
 4. **Map editor** (CAD → Live Map → Map editor) — starter locations are placed approximately and marked *unverified*; drag them into place. Use **Calibration** to line API positions up with the map image.
 5. **System → Discord Integration** — choose channels for notifications (new incidents, BOLOs, shift events, in-game 911 calls, API problems…).
 6. **System → Appearance & Customization** — community name, logo, colours, priorities, statuses, categories, unit statuses, report templates and more. Defaults are sensible, so this is optional.
+
+## Put the website online
+
+`start.bat` keeps the website private to your computer. **`start-online.bat`** starts the same
+website and bot *and* gives the website a public `https://` link anyone can open — free, with no
+account, no router or firewall changes, using [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/).
+
+1. Double-click **`start-online.bat`**. The first time, it downloads Cloudflare's official
+   `cloudflared` program (about 40 MB) into `data\tools`.
+2. The window shows **Your ERLC Nexus website is ONLINE: `https://….trycloudflare.com`**.
+   Share that link with your community.
+3. **Discord sign-in:** the window also shows a redirect address ending in `/auth/callback`
+   and copies it for you. In the Discord Developer Portal (it opens automatically) go to
+   **OAuth2 → Redirects → Add Redirect**, press **Ctrl+V**, and **Save Changes**.
+4. Stop it with **Ctrl+C** or **`stop.bat`**. The link closes with it.
+
+Good to know:
+
+* The free link **changes every time** you run `start-online.bat`, so step 3 repeats each time
+  (Discord allows up to 10 redirects — delete old ones). For a permanent address, see
+  [A permanent link](docs/DEPLOYMENT.md#a-permanent-link).
+* It's online only while this computer is on, awake and the window is open.
+* `/nexus dashboard` and other links from the bot use the public address automatically.
+* While online, `DEV_LOGIN` is switched off and HTTPS-only cookies are used, whatever
+  `config.env` says. Nothing in `config.env` is changed.
 
 ## Everyday use
 
@@ -180,11 +208,13 @@ Commands are grouped (`/server info` rather than `/server-info`) to keep Discord
 | *ERLC API rejected the server key* | The key was regenerated or mistyped. Paste the current key in **System → API Configuration**. |
 | *Private server is offline* | The ERLC API reports the server as offline when it has no players; commands need at least one player in the server. |
 | Map positions are offset | Use the **Calibration** tool in the map editor. |
+| `start-online.bat`: *Invalid OAuth2 redirect_uri* on Discord | Add the redirect address the window shows (it changes every start) under OAuth2 → Redirects and save. |
+| `start-online.bat`: *Could not download cloudflared* | Check your internet connection, or download `cloudflared-windows-amd64.exe` from github.com/cloudflare/cloudflared/releases and set `CLOUDFLARED_PATH` to it. |
 | Something else | Check **System → System Health** and **System → Logging → Application logs**, or the files in `data/logs`. |
 
 ## Hosting elsewhere (optional)
 
-You can run ERLC Nexus on any machine that runs Python (a spare PC, a VPS, etc.) using `install.sh` / `start.sh`. Third-party hosting, domains and certificates are **your choice and are not guaranteed to be free**. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for reverse-proxy, HTTPS and PostgreSQL notes.
+To share the website from your own PC, use `start-online.bat` (above). You can also run ERLC Nexus on any machine that runs Python (a spare PC, a VPS, etc.) using `install.sh` / `start.sh`. Third-party hosting, domains and certificates are **your choice and are not guaranteed to be free**. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for reverse-proxy, HTTPS and PostgreSQL notes.
 
 ## Project layout
 
@@ -201,7 +231,7 @@ scripts/          installer steps, map image download, backup CLI
 tests/            automated test suite (pytest)
 docs/             reports and guides
 run.py            launcher / supervisor
-install.bat start.bat stop.bat   Windows scripts (install.sh start.sh stop.sh for Linux/macOS)
+install.bat start.bat stop.bat   Windows scripts (start-online.bat = with a public link) (install.sh start.sh stop.sh for Linux/macOS)
 config.env.example               configuration template
 ```
 

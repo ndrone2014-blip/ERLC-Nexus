@@ -33,8 +33,28 @@ async def db_session(request: Request) -> AsyncIterator[AsyncSession]:
         yield s
 
 
+LOOPBACK = ("127.0.0.1", "::1")
+
+
+def real_ip(request: Request, trust_proxy: bool) -> str:
+    """The visitor's IP address.
+
+    Behind start-online / a local reverse proxy every request arrives from 127.0.0.1, so
+    with TRUST_PROXY the forwarded address is used instead. Forwarded headers are only
+    believed when the direct peer is this computer, so remote visitors can't spoof them.
+    """
+    peer = request.client.host if request.client else ""
+    if trust_proxy and peer in LOOPBACK:
+        fwd = request.headers.get("cf-connecting-ip") or request.headers.get("x-forwarded-for", "").split(",")[0]
+        fwd = fwd.strip()
+        if fwd:
+            return fwd[:64]
+    return peer
+
+
 def client_ip(request: Request) -> str:
-    return request.client.host if request.client else ""
+    rt = getattr(request.app.state, "runtime", None)
+    return real_ip(request, bool(rt and rt.settings.trust_proxy))
 
 
 async def load_session(s: AsyncSession, token: str | None) -> WebSession | None:

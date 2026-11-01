@@ -92,6 +92,10 @@ authentication attempts, permission changes and recent security events
 - [ ] Turn `DEV_LOGIN` off after setup.
 - [ ] Leave `WEB_HOST=127.0.0.1` unless you need network access. If you expose the site
       publicly, put it behind HTTPS (see DEPLOYMENT.md) and set `COOKIE_SECURE=true` and `PUBLIC_URL`.
+- [ ] To share the site publicly from your PC, prefer `start-online.bat`: it serves HTTPS, keeps
+      the site bound to 127.0.0.1, forces `DEV_LOGIN` off and trusts forwarded IPs only from
+      this computer. Keep `TUNNEL_TOKEN` (if used) as private as your bot token.
+- [ ] Only set `TRUST_PROXY=true` when a proxy or tunnel on this computer forwards the traffic.
 - [ ] Map only trusted Discord roles to powerful Nexus roles.
 - [ ] Make regular backups (System → Database).
 
