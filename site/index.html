@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ERLC Nexus</title>
+<meta name="description" content="ERLC Nexus — a free, self-hosted Discord bot, CAD and MDT for Emergency Response: Liberty County private servers.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+:root{--bg:#0a101c;--panel:#121a29;--panel-2:#172133;--line:#233049;--text:#e6ebf3;--text-2:#b4bfd1;--muted:#7d8aa3;--accent:#3b82f6;--accent-2:#2563eb;--ok:#22c55e;
+--font:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;--mono:ui-monospace,"Cascadia Mono",Consolas,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 var(--font);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+header{border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;justify-content:space-between;height:64px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;color:var(--text);text-decoration:none}
+.brand img{width:30px;height:30px}
+nav a{color:var(--text-2);text-decoration:none;margin-left:22px;font-size:15px}
+nav a:hover{color:var(--text)}
+.hero{padding:72px 20px 56px}
+.tag{display:inline-block;font-size:13px;color:var(--ok);border:1px solid rgba(34,197,94,.35);background:rgba(34,197,94,.08);border-radius:99px;padding:3px 12px;margin-bottom:18px}
+h1{font-size:clamp(34px,6vw,54px);line-height:1.08;margin:0 0 18px;letter-spacing:-.02em}
+h1 span{color:var(--accent)}
+.lead{font-size:19px;color:var(--text-2);max-width:680px;margin:0 0 30px}
+.btns{display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-block;padding:12px 20px;border-radius:8px;font-weight:600;text-decoration:none;font-size:15px}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-2)}
+.btn.ghost{border:1px solid var(--line);color:var(--text)}
+.btn.ghost:hover{border-color:var(--accent)}
+section{padding:48px 0;border-top:1px solid var(--line)}
+h2{font-size:28px;margin:0 0 8px;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0 0 28px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px}
+.card h3{margin:0 0 6px;font-size:17px}
+.card p{margin:0;color:var(--text-2);font-size:15px}
+ol.steps{counter-reset:s;list-style:none;padding:0;margin:0;display:grid;gap:12px}
+ol.steps li{counter-increment:s;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px 16px 62px;position:relative;color:var(--text-2)}
+ol.steps li::before{content:counter(s);position:absolute;left:18px;top:15px;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;display:grid;place-items:center;font-size:14px}
+ol.steps b{color:var(--text)}
+code{overflow-wrap:anywhere;font-family:var(--mono);background:var(--panel-2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:.88em;color:var(--text)}
+.note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:16px 18px;color:var(--text-2)}
+footer{border-top:1px solid var(--line);padding:28px 0;color:var(--muted);font-size:14px}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+@media (max-width:600px){nav a:not(:last-child){display:none}.hero{padding:48px 20px 40px}}
+</style>
+</head>
+<body>
+<header><div class="wrap bar">
+  <a class="brand" href="/"><img src="/favicon.svg" alt="">ERLC Nexus</a>
+  <nav><a href="#features">Features</a><a href="#setup">Setup</a><a href="https://github.com/ndrone2014-blip/ERLC-Nexus">GitHub</a></nav>
+</div></header>
+
+<main>
+<div class="wrap hero">
+  <span class="tag">100% free · no premium tiers · no ads</span>
+  <h1>The complete <span>ERLC</span> platform for your private server.</h1>
+  <p class="lead">A Discord bot, a live CAD/MDT and a staff website for Emergency Response: Liberty County communities — all sharing one backend, powered by the official PRC API, and hosted by you.</p>
+  <div class="btns">
+    <a class="btn primary" href="https://github.com/ndrone2014-blip/ERLC-Nexus/archive/refs/heads/main.zip">Download ERLC Nexus</a>
+    <a class="btn ghost" href="https://github.com/ndrone2014-blip/ERLC-Nexus">View on GitHub</a>
+  </div>
+</div>
+
+<section id="features"><div class="wrap">
+  <h2>Everything your community runs on</h2>
+  <p class="sub">Built around real ERLC data from the official API — nothing faked.</p>
+  <div class="grid">
+    <div class="card"><h3>Live CAD &amp; dispatch</h3><p>Incidents, priorities, unit board, drag-and-drop assignment and full timelines. In-game 911 calls land in the queue.</p></div>
+    <div class="card"><h3>Live map</h3><p>The official ERLC map with players, units, incidents and traffic stops, plus a map editor and calibration tool.</p></div>
+    <div class="card"><h3>MDT &amp; records</h3><p>People, vehicles, plate checks, BOLOs, warrants, cases and traffic stops — with revision history.</p></div>
+    <div class="card"><h3>74 Discord commands</h3><p>Server, players, CAD, units, shifts, BOLOs and reports from Discord, with buttons, forms and auto-refreshing panels.</p></div>
+    <div class="card"><h3>Departments &amp; shifts</h3><p>Ranks, rosters, callsigns, promotions and duty hours with approval and an audit trail.</p></div>
+    <div class="card"><h3>Server management</h3><p>Players, logs, kicks, bans, announcements and in-game commands through the official PRC API.</p></div>
+    <div class="card"><h3>Reports &amp; analytics</h3><p>Report drafting and review, server and department analytics, CSV export.</p></div>
+    <div class="card"><h3>Secure by design</h3><p>Discord sign-in, role-based permissions, tamper-evident audit log. API keys never leave your server.</p></div>
+  </div>
+</div></section>
+
+<section id="setup"><div class="wrap">
+  <h2>Set it up on your PC</h2>
+  <p class="sub">About 15 minutes. Windows, with Linux/macOS scripts included.</p>
+  <ol class="steps">
+    <li><b>Install Python 3.12+</b> from python.org and tick “Add python.exe to PATH”.</li>
+    <li><b>Download and extract</b> ERLC Nexus, then double-click <code>install.bat</code>. It creates <code>config.env</code>.</li>
+    <li><b>Create a Discord application</b> and copy its Application ID, Client Secret and Bot Token into <code>config.env</code>. Add the redirect <code>http://localhost:8420/auth/callback</code>.</li>
+    <li><b>Add your ERLC server key</b> (in-game: Settings → ER:LC API) — or add it later on the website.</li>
+    <li><b>Double-click <code>start.bat</code></b> and open <code>http://localhost:8420</code>. Sign in with Discord.</li>
+  </ol>
+  <p class="sub" style="margin-top:20px">Full guide: <a href="https://github.com/ndrone2014-blip/ERLC-Nexus#readme">README</a> · Going online: <a href="https://github.com/ndrone2014-blip/ERLC-Nexus/blob/main/docs/DEPLOYMENT.md">deployment guide</a></p>
+</div></section>
+
+<section><div class="wrap">
+  <div class="note"><b style="color:var(--text)">Why isn’t the dashboard on this page?</b><br>
+  This is the project’s homepage. The CAD, MDT and bot run on your own computer or server, because they need a live program and a database — that’s also what keeps your community’s data and API key private to you.</div>
+</div></section>
+</main>
+
+<footer><div class="wrap">
+  <span>Developed by Drone Hive Studios | Developer @ndrone40</span>
+  <span>MIT licence · Not affiliated with Police Roleplay Community or Roblox.</span>
+</div></footer>
+</body>
+</html>

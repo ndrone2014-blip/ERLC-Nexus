@@ -1,0 +1,13 @@
+# Netlify serves only the static project homepage in /site.
+# The ERLC Nexus dashboard, CAD/MDT and bot need a running Python server and
+# cannot run on Netlify — see docs/DEPLOYMENT.md.
+[build]
+  publish = "site"
+  command = ""
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "DENY"
